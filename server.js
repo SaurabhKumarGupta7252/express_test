@@ -3,6 +3,7 @@ import express from 'express';
 import { sql } from 'drizzle-orm';
 import { db, pool } from './src/db/index.js';
 import usersRouter from './src/modules/users/users.routes.js';
+import authRouter from './src/modules/auth/auth.routes.js';
 import imagesRouter from './src/modules/images/images.routes.js';
 
 const app = express();
@@ -12,6 +13,7 @@ const startedAt = Date.now();
 // app.disable('x-powered-by');
 app.use(express.json());
 app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/images', imagesRouter);
 
 // Liveness: confirms the process is running. Keep this independent of external services.

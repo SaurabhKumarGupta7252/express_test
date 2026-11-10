@@ -1,18 +1,7 @@
-import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
-import { promisify } from 'node:util';
 import { eq } from 'drizzle-orm';
 import { db } from '../../db/index.js';
 import { users } from '../../db/schema.js';
-
-const scrypt = promisify(scryptCallback);
-const saltBytes = 16;
-const keyLength = 64;
-
-async function hashPassword(password) {
-  const salt = randomBytes(saltBytes).toString('hex');
-  const derivedKey = await scrypt(password, salt, keyLength);
-  return `scrypt$${salt}$${derivedKey.toString('hex')}`;
-}
+import { hashPassword } from '../../security/password.js';
 
 export async function registerUser({ email, password }) {
   const existingUser = await db.query.users.findFirst({

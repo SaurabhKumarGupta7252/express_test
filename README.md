@@ -1,46 +1,53 @@
 # Health API
 
-A minimal Express API using PostgreSQL through Drizzle ORM.
+Express API with PostgreSQL, Drizzle ORM, user registration, and authenticated Cloudinary image storage.
 
 ## Run
 
 ```sh
 npm install
-npm run db:generate
 npm run db:migrate
 npm start
 ```
 
-Copy `.env.example` to `.env` and set `DATABASE_URL` to your PostgreSQL connection string and the Cloudinary credentials (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) before starting the API. The server listens on port `3000` by default; set `PORT` to use another port.
+Copy `.env.example` to `.env`. Configure `DATABASE_URL`, the Cloudinary credentials (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`), and a random `AUTH_TOKEN_SECRET` of at least 32 bytes. Generate the token secret with `openssl rand -base64 32`. The server listens on port `3000` by default; set `PORT` to use another port.
 
 ## Endpoints
 
-- `GET /health` — returns service status, an ISO timestamp, and process uptime.
-- `GET /ready` — checks PostgreSQL connectivity and returns HTTP `503` if the database is unavailable.
+- `GET /health` — liveness check.
+- `GET /ready` — checks PostgreSQL connectivity.
 - `POST /api/v1/users` — registers a user.
-- `POST /api/v1/images` — uploads one image to Cloudinary and returns its public URL.
+- `POST /api/v1/auth/login` — signs in and returns a 15-minute bearer token.
+- `GET /api/v1/images` — lists the signed-in user's images.
+- `POST /api/v1/images` — uploads one authenticated image for the signed-in user.
+- `GET /api/v1/images/:id/content` — streams an image only to its signed-in owner.
 
-Drizzle schema lives in `src/db/schema.js`; generated SQL migrations are stored in `drizzle/`.
-
-### Register a user
+## Register and sign in
 
 ```sh
 curl -X POST http://localhost:3000/api/v1/users \
   -H 'Content-Type: application/json' \
   -d '{"email":"jordan@example.com","password":"a-long-password"}'
+
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"jordan@example.com","password":"a-long-password"}'
 ```
 
-Registration requires a valid email and a password between 8 and 128 characters. The password is stored as a salted scrypt hash; the API response never includes it. User feature code is grouped under `src/modules/users/` into routes, controller, validation, and service files.
+Use the `accessToken` from the login response in the `Authorization: Bearer ...` header below.
 
-### Upload an image
+## Upload and retrieve images
 
-Send a `multipart/form-data` request with the image in the `image` field. Uploads are limited to 5 MB.
+Uploads use `multipart/form-data` with the file in the `image` field and are limited to 5 MB.
 
 ```sh
 curl -X POST http://localhost:3000/api/v1/images \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -F 'image=@/path/to/image.jpg'
+
+curl http://localhost:3000/api/v1/images/IMAGE_ID/content \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  --output downloaded-image.jpg
 ```
 
-The response includes `data.url` (the Cloudinary HTTPS delivery URL) and `data.publicId`.
-
-Healthy liveness and readiness checks return HTTP `200`; registration returns HTTP `201`. Unknown paths return HTTP `404` with a JSON error.
+Cloudinary stores uploads as authenticated assets. The API associates each image with its owner and streams content only after validating the bearer token and ownership; it does not return a reusable Cloudinary URL. Image code is in `src/modules/images/`; login code is in `src/modules/auth/`.
