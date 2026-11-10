@@ -6,9 +6,19 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node migrate.js"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.44.7",
+    "express": "^5.1.0",
+    "cloudinary": "^2.7.0",
+    "multer": "^2.0.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.5"
   }
 }
